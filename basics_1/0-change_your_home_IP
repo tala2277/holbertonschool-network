@@ -1,53 +1,5 @@
 #!/usr/bin/env bash
-# 0-change_your_home_IP
-# Configures /etc/hosts so:
-# - localhost -> 127.0.0.2
-# - facebook.com -> 8.8.8.8
+# Configure localhost and facebook.com IP addresses
 
-set -euo pipefail
-
-HOSTS_FILE="/etc/hosts"
-
-# Must be run as root
-if [ "$(id -u)" -ne 0 ]; then
-  echo "This script must be run as root (use sudo)." >&2
-  exit 1
-fi
-
-# Backup (nice to have)
-cp "$HOSTS_FILE" "${HOSTS_FILE}.bak" 2>/dev/null || true
-
-# Remove any existing mappings for localhost and facebook.com
-# (keeps other hostnames on the lines; then we add clean lines)
-tmp="$(mktemp)"
-
-# Remove tokens "localhost" or "facebook.com" from lines, and drop empty IP-only lines
-awk '
-{
-  # If line is a comment or blank, keep it
-  if ($0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) { print; next }
-
-  # Build a new line without localhost/facebook.com tokens
-  out = $1
-  for (i = 2; i <= NF; i++) {
-    if ($i != "localhost" && $i != "facebook.com") out = out " " $i
-  }
-
-  # If only the IP remains (no hostnames), drop the line
-  n = split(out, a, /[[:space:]]+/)
-  if (n <= 1) next
-
-  print out
-}
-' "$HOSTS_FILE" > "$tmp"
-
-# Add required mappings (put near top for clarity)
-{
-  echo "127.0.0.2 localhost"
-  echo "8.8.8.8 facebook.com"
-  echo
-  cat "$tmp"
-} > "$HOSTS_FILE"
-
-rm -f "$tmp"
-exit 0
+sed -i '/^[[:space:]]*127\.0\.0\.1[[:space:]]\+localhost\([[:space:]]\|$\)/d; /^[[:space:]]*127\.0\.0\.2[[:space:]]\+localhost\([[:space:]]\|$\)/d; /^[[:space:]]*8\.8\.8\.8[[:space:]]\+facebook\.com\([[:space:]]\|$\)/d; /^[[:space:]]*#.*facebook\.com/d' /etc/hosts
+printf '127.0.0.2 localhost\n8.8.8.8 facebook.com\n' >> /etc/hosts
